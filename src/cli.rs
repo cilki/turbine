@@ -10,7 +10,7 @@ use std::{path::PathBuf, process::ExitCode, sync::Arc};
 
 use tokio::{net::TcpListener, sync::Mutex};
 use tokio_schedule::{every, Job};
-use tracing::info;
+use tracing::{info, warn};
 
 #[derive(clap::Subcommand, Debug, Clone)]
 pub enum Commands {
@@ -98,17 +98,26 @@ pub async fn serve(args: &ServeArgs) -> Result<ExitCode> {
 
     let address = args.bind.clone().unwrap_or("0.0.0.0:80".to_string());
 
+    // Derive the port the server is actually listening on so the hourly
+    // self-refresh reaches it even when --bind uses a non-default port.
+    let port = address
+        .rsplit(':')
+        .next()
+        .and_then(|p| p.parse::<u16>().ok())
+        .unwrap_or(80);
+
     // Refresh every hour
     let every_hour = every(1)
         .hour()
         .at(10, 30)
         .in_timezone(&Utc)
-        .perform(|| async move {
-            reqwest::Client::new()
-                .post(format!("http://127.0.0.1:{}/refresh", 80)) // TODO
-                .send()
-                .await
-                .unwrap();
+        .perform(move || async move {
+            let url = format!("http://127.0.0.1:{port}/refresh");
+            // Log instead of unwrapping: a single failed self-request must not
+            // panic the scheduled task and silently stop all future refreshes.
+            if let Err(e) = reqwest::Client::new().post(&url).send().await {
+                warn!(url = %url, error = %e, "Scheduled refresh request failed");
+            }
         });
     tokio::spawn(every_hour);
 
