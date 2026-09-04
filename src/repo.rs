@@ -413,7 +413,9 @@ mod tests {
             .collect();
 
         Contributor {
-            address: Address::XMR("test_address".to_string()),
+            // Address variant is irrelevant to compute_payout; use BTC so the
+            // tests compile without the optional `monero` feature.
+            address: Address::BTC("test_address".to_string()),
             commits,
             key_id: "test_key".to_string(),
             last_payout: None,
