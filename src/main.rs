@@ -1,7 +1,7 @@
 use crate::cli::Commands;
 use anyhow::Result;
 
-use clap::Parser;
+use clap::{CommandFactory, Parser};
 use std::process::ExitCode;
 
 mod api;
@@ -12,7 +12,7 @@ mod currency;
 mod repo;
 
 #[derive(Parser, Debug)]
-#[clap(author, version, about, long_about = None)]
+#[clap(author, version, about, long_about = None, arg_required_else_help = true)]
 struct CommandLine {
     #[clap(subcommand)]
     command: Option<Commands>,
@@ -28,6 +28,12 @@ async fn main() -> Result<ExitCode> {
     // Dispatch command
     match &args.command {
         Some(Commands::Serve(args)) => crate::cli::serve(args).await,
-        None => todo!(),
+        // `arg_required_else_help` makes clap print help and exit before we get
+        // here when no subcommand is given, but handle it gracefully instead of
+        // panicking in case that guard is ever removed.
+        None => {
+            CommandLine::command().print_help()?;
+            Ok(ExitCode::FAILURE)
+        }
     }
 }
