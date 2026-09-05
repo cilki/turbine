@@ -276,30 +276,44 @@ impl TurbineRepo {
                 if let Ok(key_id) = verify_signature(self.tmp.path().to_path_buf(), &commit) {
                     if let Some(message) = commit.message() {
                         #[cfg(feature = "monero")]
-                        if let Some((_, address)) = message.split_once("XMR") {
-                            let address = address.trim().to_string();
-                            if let Some(contributor) = self
-                                .contributors
-                                .iter_mut()
-                                .find(|contributor| contributor.key_id == key_id)
-                            {
-                                debug!(
-                                    old = ?contributor.address,
-                                    new = ?address,
-                                    "Updating contributor address"
-                                );
-                                contributor.address = Address::XMR(address);
-                            } else {
-                                let contributor = Contributor {
-                                    address: Address::XMR(address),
-                                    last_payout: None,
-                                    key_id,
-                                    commits: Vec::new(),
-                                    name: commit.author().name().unwrap_or("<invalid>").to_string(),
-                                };
+                        if let Some((_, raw_address)) = message.split_once("XMR") {
+                            let raw_address = raw_address.trim();
+                            match Address::try_parse("xmr", raw_address) {
+                                Some(address) => {
+                                    if let Some(contributor) = self
+                                        .contributors
+                                        .iter_mut()
+                                        .find(|contributor| contributor.key_id == key_id)
+                                    {
+                                        debug!(
+                                            old = ?contributor.address,
+                                            new = ?address,
+                                            "Updating contributor address"
+                                        );
+                                        contributor.address = address;
+                                    } else {
+                                        let contributor = Contributor {
+                                            address,
+                                            last_payout: None,
+                                            key_id,
+                                            commits: Vec::new(),
+                                            name: commit
+                                                .author()
+                                                .name()
+                                                .unwrap_or("<invalid>")
+                                                .to_string(),
+                                        };
 
-                                info!(contributor = ?contributor, "Adding new contributor");
-                                self.contributors.push(contributor);
+                                        info!(contributor = ?contributor, "Adding new contributor");
+                                        self.contributors.push(contributor);
+                                    }
+                                }
+                                None => {
+                                    tracing::warn!(
+                                        address = raw_address,
+                                        "Ignoring commit with unparseable XMR address"
+                                    );
+                                }
                             }
                         }
                     }

@@ -15,11 +15,19 @@ pub enum Address {
 
 impl Address {
     pub fn try_parse(currency: &str, address: &str) -> Option<Self> {
-        // TODO validate address
         match currency.to_lowercase().as_str() {
-            "btc" => Some(Self::BTC(address.into())),
+            // BTC address validation needs a dedicated bitcoin crate; for now only
+            // reject the obviously-empty case.
+            "btc" if !address.is_empty() => Some(Self::BTC(address.into())),
             #[cfg(feature = "monero")]
-            "xmr" => Some(Self::XMR(address.into())),
+            "xmr" => {
+                // Reject anything the monero crate can't parse as a real address so
+                // we never register (and later try to pay out to) a garbage string.
+                address
+                    .parse::<::monero::Address>()
+                    .ok()
+                    .map(|_| Self::XMR(address.into()))
+            }
             _ => None,
         }
     }
@@ -36,4 +44,36 @@ pub async fn lookup(symbol: &str) -> Result<f64> {
     .await?;
 
     Ok(*mapping.get(symbol).unwrap())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn try_parse_btc() {
+        assert_eq!(
+            Address::try_parse("btc", "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2"),
+            Some(Address::BTC("1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2".into()))
+        );
+        // Currency matching is case-insensitive.
+        assert!(Address::try_parse("BTC", "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2").is_some());
+        // Empty and unknown currencies are rejected.
+        assert_eq!(Address::try_parse("btc", ""), None);
+        assert_eq!(Address::try_parse("doge", "whatever"), None);
+    }
+
+    #[cfg(feature = "monero")]
+    #[test]
+    fn try_parse_xmr() {
+        let valid = "4AdUndXHHZ6cfufTMvppY6JwXNouMBzSkbLYfpAV5Usx3skxNgYeYTRj5UzqtReoS44qo9mtmXCqY45DJ852K5Jv2684Rge";
+        assert_eq!(
+            Address::try_parse("xmr", valid),
+            Some(Address::XMR(valid.into()))
+        );
+        // A malformed address (bad checksum / wrong length) is rejected instead of
+        // being stored as a payout target.
+        assert_eq!(Address::try_parse("xmr", "not-a-real-address"), None);
+        assert_eq!(Address::try_parse("xmr", ""), None);
+    }
 }
