@@ -240,9 +240,7 @@ pub async fn balance(State(state): State<AppState>) -> impl IntoResponse {
         crate::badge::generate(
             "balance",
             &format!("{:.1} XMR", PrettyPrintFloat(monero_balance)),
-        )
-        .await
-        .unwrap(),
+        ),
     )
 }
 
@@ -253,9 +251,7 @@ pub async fn payouts(State(state): State<AppState>) -> impl IntoResponse {
         crate::badge::generate(
             "payouts",
             &format!("{}", state.monero.get_transfers().await.unwrap().len()),
-        )
-        .await
-        .unwrap(),
+        ),
     )
 }
 
@@ -266,8 +262,6 @@ pub async fn address(State(state): State<AppState>) -> impl IntoResponse {
         crate::badge::generate(
             "XMR",
             &format!("{}", state.monero.wallet_address.to_string()),
-        )
-        .await
-        .unwrap(),
+        ),
     )
 }

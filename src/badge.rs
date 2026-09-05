@@ -1,8 +1,5 @@
-use anyhow::Result;
-use cached::proc_macro::once;
-
 /// Generate a simple SVG badge with the given attributes.
-pub fn _generate(title: &str, value: &str) -> String {
+pub fn generate(title: &str, value: &str) -> String {
     format!(
         r###"
         <svg
@@ -29,29 +26,17 @@ pub fn _generate(title: &str, value: &str) -> String {
         	</g>
         </svg>
     "###,
-        title,
-        value,
-        // title.len() * 10,
-        // value.len() * 10,
+        title, value,
     )
-}
-
-/// Load a badge from shields.io. TODO: replace this with a custom generator.
-#[once(result = true)]
-pub async fn generate(title: &str, value: &str) -> Result<String> {
-    Ok(reqwest::get(format!(
-        "https://img.shields.io/badge/{}-{}-green",
-        title, value
-    ))
-    .await?
-    .text()
-    .await?)
 }
 
 #[cfg(test)]
 mod test {
-    #[tokio::test]
-    async fn test_generate() {
-        super::generate("test", "value").await.unwrap();
+    #[test]
+    fn test_generate() {
+        let svg = super::generate("balance", "1.5 XMR");
+        assert!(svg.contains("<svg"));
+        assert!(svg.contains("balance"));
+        assert!(svg.contains("1.5 XMR"));
     }
 }
