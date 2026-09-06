@@ -59,22 +59,23 @@ impl MoneroState {
             .and_then(|p| p.parent())
             .unwrap_or_else(|| std::path::Path::new("/wallets"));
 
-        let wallet_process = Command::new("monero-wallet-rpc")
+        let mut command = Command::new("monero-wallet-rpc");
+        command
             .arg("--rpc-bind-port")
             .arg(format!("{}", args.monero_rpc_port))
-            .arg(if args.stagenet {
-                "--stagenet"
-            } else if args.testnet {
-                "--testnet"
-            } else {
-                // TODO hack
-                "--non-interactive"
-            })
+            // Always run headless: the daemon must never block on an interactive
+            // prompt, regardless of which network it targets.
+            .arg("--non-interactive")
             .arg("--wallet-dir")
             .arg(wallet_dir)
             .arg("--daemon-address")
-            .arg(&args.monero_daemon_address)
-            .spawn()?;
+            .arg(&args.monero_daemon_address);
+        if args.stagenet {
+            command.arg("--stagenet");
+        } else if args.testnet {
+            command.arg("--testnet");
+        }
+        let wallet_process = command.spawn()?;
 
         // Wait for the daemon to start
         std::thread::sleep(Duration::from_secs(20));
