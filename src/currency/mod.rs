@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Duration};
 
-use anyhow::Result;
+use anyhow::{anyhow, bail, Result};
 use cached::proc_macro::once;
 
 #[cfg(feature = "monero")]
@@ -33,17 +33,32 @@ impl Address {
     }
 }
 
-/// Lookup the current USD value of the given currency.
+/// Look up the current USD value of one unit of the given currency.
 #[once(time = "3600", result = true)]
 pub async fn lookup(symbol: &str) -> Result<f64> {
-    let mapping: HashMap<String, f64> = reqwest::get(format!(
-        "https://min-api.cryptocompare.com/data/price?fsym=USD&tsyms={symbol}"
+    // CoinGecko's public price endpoint keys on the coin's *id*, not its ticker,
+    // and needs no API key (unlike cryptocompare, which now 401s without one).
+    let id = match symbol.to_uppercase().as_str() {
+        "XMR" => "monero",
+        "BTC" => "bitcoin",
+        other => bail!("No price source configured for currency {other}"),
+    };
+
+    // Response shape: { "monero": { "usd": 168.0 } }. We ask for the price of the
+    // coin *in* USD, so the result can be multiplied directly by a coin balance to
+    // get its USD value.
+    let mapping: HashMap<String, HashMap<String, f64>> = reqwest::get(format!(
+        "https://api.coingecko.com/api/v3/simple/price?ids={id}&vs_currencies=usd"
     ))
     .await?
     .json()
     .await?;
 
-    Ok(*mapping.get(symbol).unwrap())
+    mapping
+        .get(id)
+        .and_then(|quotes| quotes.get("usd"))
+        .copied()
+        .ok_or_else(|| anyhow!("Price response missing a USD quote for {symbol}"))
 }
 
 #[cfg(test)]
