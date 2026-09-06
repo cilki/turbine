@@ -209,35 +209,6 @@ impl TurbineRepo {
         }
     }
 
-    /// Get all signed commits (whether their signatures are valid or not).
-    pub fn get_signed_commits(&self) -> Result<Vec<Oid>> {
-        let mut revwalk = self.container.revwalk()?;
-        let branch = self
-            .container
-            .find_branch(&self.branch, git2::BranchType::Local)?;
-        let branch_ref = branch.into_reference();
-
-        revwalk.push(branch_ref.target().unwrap())?;
-
-        let mut commits = Vec::new();
-        loop {
-            if let Some(next) = revwalk.next() {
-                let commit = self.container.find_commit(next?)?;
-
-                // Check for GPG signature
-                if let Some(header) = commit.raw_header() {
-                    if header.contains("gpgsig") {
-                        commits.push(commit.id());
-                    }
-                }
-            } else {
-                break;
-            }
-        }
-
-        Ok(commits)
-    }
-
     pub fn refresh(&mut self) -> Result<()> {
         // Always fetch the repo first
         debug!("Fetching upstream repo");
@@ -369,35 +340,6 @@ impl TurbineRepo {
         Ok(())
     }
 }
-
-// impl PaidCommit {
-//     pub fn try_parse(commit: Commit) -> Result<Self> {
-//         match commit.message() {
-//             Some(message) => {
-//                 for line in message.split("\n") {
-//                     match line.split_once(":") {
-//                         Some((currency, rest)) => {
-//                             match Address::try_parse(currency.trim(), rest.trim()) {
-//                                 Some(address) => {
-//                                     return Ok(Self {
-//                                         address,
-//                                         id: commit.id(),
-//                                     });
-//                                 }
-//                                 None => (),
-//                             }
-//                         }
-//                         None => (),
-//                     }
-//                 }
-//             }
-//             None => {
-//                 debug!("Encountered invalid UTF-8 commit message");
-//             }
-//         }
-//         bail!("No currency line found");
-//     }
-// }
 
 #[cfg(test)]
 mod tests {
