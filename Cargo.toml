@@ -26,7 +26,6 @@ base64 = "0.22.1"
 cached = { version = "0.56.0", features = ["async"] }
 chrono = "0.4.38"
 clap = { version = "4.5.4", features = ["string", "derive"] }
-config = "0.13.4"
 float-pretty-print = "0.1.1"
 git2 = "0.20.2"
 # gpgme = "0.11.0"

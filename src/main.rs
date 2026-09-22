@@ -7,7 +7,6 @@ use std::process::ExitCode;
 mod api;
 mod badge;
 mod cli;
-mod config;
 mod currency;
 mod repo;
 
