@@ -6,6 +6,30 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.0.5](https://github.com/cilki/turbine/compare/v0.0.4...v0.0.5) - 2026-09-22
+
+### Added
+
+- *(badge)* generate SVG badges locally instead of fetching shields.io
+
+### Fixed
+
+- *(cli)* print help instead of panicking when no subcommand is given
+- *(tests)* use always-available Address variant in test helper
+- *(currency)* validate XMR addresses before registering contributors
+- *(cli)* send hourly refresh to the configured port, not hardcoded 80
+
+### Other
+
+- remove dead config module and unused code
+- Relicense
+- improve commit log UI
+- add UI examples
+- continue e2e tests
+- begin to add e2e test
+- begin to show all paid commits
+- allow keyserver to be configured
+
 ## [0.0.4](https://github.com/fossable/turbine/compare/v0.0.3...v0.0.4) - 2024-06-30
 
 ### Other
